@@ -29,7 +29,7 @@ def decode_webp(blob: bytes) -> np.ndarray:
 
 def decode_sogst_fields(v3_path):
     """Decode a .sogst archive into the field dict the packer consumes,
-    plus a (time_min, time_max, fps) header tuple."""
+    plus a header dict (time_min, time_max, fps, count)."""
     zf = zipfile.ZipFile(v3_path)
     meta = json.loads(zf.read('meta.json'))
     n = meta['count']
