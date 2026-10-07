@@ -29,6 +29,12 @@ def _bhwc(img):
 
 
 def _bchw(img):
+    # A single image goes through permute(2, 0, 1)[None], exactly as
+    # eval_render.py always did.  The batched route yields a tensor with a
+    # different batch stride, and cuDNN then picks a different convolution
+    # algorithm: LPIPS moved by about 1e-6 per view.
+    if img.dim() == 3:
+        return img.permute(2, 0, 1)[None]
     return _bhwc(img).permute(0, 3, 1, 2)
 
 
@@ -47,21 +53,23 @@ def ssim(img, gt):
 class LPIPS:
     """Learned perceptual distance, AlexNet backbone.
 
-    The network loads on first call, on the device of the first input, so
-    constructing this costs nothing.  Its weights are frozen.
+    The network loads on first call, on the device of the first input (or
+    `device`), so constructing this costs nothing.  Its weights are frozen.
+    verbose=True keeps the lpips package's setup messages.
 
         lpips = LPIPS()
         d = lpips(render, gt)      # 0-d tensor, mean over the batch
     """
 
-    def __init__(self, net='alex', device=None):
+    def __init__(self, net='alex', device=None, verbose=False):
         self.net_name = net
         self.device = device
+        self.verbose = verbose
         self._net = None
 
     def _load(self, device):
         import lpips as lpips_mod
-        net = lpips_mod.LPIPS(net=self.net_name, verbose=False).to(device)
+        net = lpips_mod.LPIPS(net=self.net_name, verbose=self.verbose).to(device)
         net.eval()
         for p in net.parameters():
             p.requires_grad_(False)
