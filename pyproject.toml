@@ -27,5 +27,11 @@ where = ["src"]
 minversion = "7.0"
 testpaths = ["tests"]
 addopts = "-ra --strict-markers --strict-config"
-filterwarnings = ["error", "ignore::UserWarning:torchvision", "ignore::DeprecationWarning:lpips", "ignore::UserWarning:lpips"]
+filterwarnings = [
+    "error",
+    "ignore::FutureWarning:torchmetrics",
+    "ignore::UserWarning:torchvision",
+    "ignore::DeprecationWarning:lpips",
+    "ignore::UserWarning:lpips",
+]
 markers = ["gpu: needs CUDA and gsplat"]
