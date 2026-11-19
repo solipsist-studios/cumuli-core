@@ -180,3 +180,15 @@ def test_loss_weight_error_names_the_file_and_the_view(tmp_path):
     with pytest.raises(ValueError) as exc:
         load_transforms(path)
     assert "transforms_train.json" in str(exc.value) and "images/01" in str(exc.value)
+
+
+def test_time_offset_defaults_to_zero_and_adds_to_capture_time(tmp_path):
+    path = per_frame_transforms(tmp_path, n=2, times=(0.5, 0.5))
+    data = json.loads(path.read_text())
+    data["frames"][1]["time_offset"] = 0.004
+    path.write_text(json.dumps(data))
+    a, b = load_transforms(path)
+    assert a.time_offset == 0.0 and a.capture_time == 0.5
+    assert b.time == 0.5 and abs(b.capture_time - 0.504) < 1e-12
+    # Views of one instant still group together: the offset is not a new instant.
+    assert list(group_by_time([a, b])) == [0.5]

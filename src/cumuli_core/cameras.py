@@ -36,13 +36,19 @@ class Camera:
     width,
     height     : image size in pixels after downscale, or None when the
                  transforms file does not say.
-    time       : seconds, from the entry's `time` (0.0 when absent).
+    time       : seconds, from the entry's `time` (0.0 when absent).  The
+                 nominal frame time: every camera of one synced instant has
+                 the same value, so it is the key views are grouped by.
     label      : the entry's camera_label, or None.
     loss_weight: how much this view's photometric loss counts, from the
                  entry's `loss_weight` (1.0 when absent; 0 or more).  A
                  dataset marks views it trusts less, such as generated ones,
                  with a value below 1.  Trainers scale that view's colour
                  loss by it; the format says nothing about other terms.
+    time_offset: seconds, from the entry's `time_offset` (0.0 when absent).
+                 How much later than `time` this camera actually took the
+                 picture (a sub-frame sync residual, PLUS convention:
+                 capture = nominal + offset).
     """
     name: str
     image_path: str
@@ -53,7 +59,14 @@ class Camera:
     time: float
     label: Optional[str] = None
     loss_weight: float = 1.0
+    time_offset: float = 0.0
     extra: dict = field(default_factory=dict, repr=False, compare=False)
+
+    @property
+    def capture_time(self) -> float:
+        """Seconds at which this view was actually captured: `time` plus the
+        camera's sub-frame offset.  Render at this time to match the photo."""
+        return self.time + self.time_offset
 
     @property
     def c2w(self) -> np.ndarray:
@@ -126,6 +139,7 @@ def load_transforms(path, downscale=1.0, every=1):
             time=float(f.get('time', 0.0)),
             label=f.get('camera_label'),
             loss_weight=_loss_weight(f, path),
+            time_offset=float(f.get('time_offset', 0.0)),
         ))
     return cams
 
