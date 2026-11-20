@@ -192,3 +192,16 @@ def test_time_offset_defaults_to_zero_and_adds_to_capture_time(tmp_path):
     assert b.time == 0.5 and abs(b.capture_time - 0.504) < 1e-12
     # Views of one instant still group together: the offset is not a new instant.
     assert list(group_by_time([a, b])) == [0.5]
+
+
+def test_visit_weight_defaults_to_one_and_must_be_positive(tmp_path):
+    path = per_frame_transforms(tmp_path, n=2)
+    data = json.loads(path.read_text())
+    data["frames"][1]["visit_weight"] = 2.5
+    path.write_text(json.dumps(data))
+    a, b = load_transforms(path)
+    assert a.visit_weight == 1.0 and b.visit_weight == 2.5
+    data["frames"][1]["visit_weight"] = 0
+    path.write_text(json.dumps(data))
+    with pytest.raises(ValueError, match="visit_weight"):
+        load_transforms(path)

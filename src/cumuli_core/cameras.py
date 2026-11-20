@@ -57,6 +57,9 @@ class Camera:
                  ({"model", "K", "dist", "w", "h"}, full raw resolution), or
                  None.  The distorted sensor the undistorted image came
                  from; it says which raw row (so which time) each pixel is.
+    visit_weight: from the entry's `visit_weight` (1.0 when absent): how many
+                 times as often training should visit this view's instant
+                 (frame_motion.py gives fast frames more than 1).
     """
     name: str
     image_path: str
@@ -70,6 +73,7 @@ class Camera:
     time_offset: float = 0.0
     readout_s: float = 0.0
     raw_camera: Optional[object] = field(default=None, repr=False, compare=False)
+    visit_weight: float = 1.0
     extra: dict = field(default_factory=dict, repr=False, compare=False)
 
     @property
@@ -157,8 +161,19 @@ def load_transforms(path, downscale=1.0, every=1):
             time_offset=float(f.get('time_offset', 0.0)),
             readout_s=float(f.get('readout_s') or 0.0),
             raw_camera=_raw_camera(f.get('raw_camera')),
+            visit_weight=_visit_weight(f.get('visit_weight')),
         ))
     return cams
+
+
+def _visit_weight(v):
+    """A view's visit weight: 1.0 when absent; it must be a positive number."""
+    if v is None:
+        return 1.0
+    w = float(v)
+    if not w > 0:
+        raise ValueError(f"visit_weight must be positive, got {v!r}")
+    return w
 
 
 def _raw_camera(d):
