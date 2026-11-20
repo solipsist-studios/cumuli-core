@@ -49,6 +49,14 @@ class Camera:
                  How much later than `time` this camera actually took the
                  picture (a sub-frame sync residual, PLUS convention:
                  capture = nominal + offset).
+    readout_s  : seconds, from the entry's `readout_s` (0.0 when absent):
+                 the rolling-shutter readout, first raw sensor line to last.
+                 0 is a global shutter.  time_offset is the middle line's
+                 time; see cumuli_core.shutter.
+    raw_camera : cumuli_core.shutter.RawCamera from the entry's `raw_camera`
+                 ({"model", "K", "dist", "w", "h"}, full raw resolution), or
+                 None.  The distorted sensor the undistorted image came
+                 from; it says which raw row (so which time) each pixel is.
     """
     name: str
     image_path: str
@@ -60,6 +68,8 @@ class Camera:
     label: Optional[str] = None
     loss_weight: float = 1.0
     time_offset: float = 0.0
+    readout_s: float = 0.0
+    raw_camera: Optional[object] = field(default=None, repr=False, compare=False)
     extra: dict = field(default_factory=dict, repr=False, compare=False)
 
     @property
@@ -67,6 +77,11 @@ class Camera:
         """Seconds at which this view was actually captured: `time` plus the
         camera's sub-frame offset.  Render at this time to match the photo."""
         return self.time + self.time_offset
+
+    @property
+    def rolling_shutter(self) -> bool:
+        """True when the view's rows were read at different times."""
+        return self.readout_s != 0.0
 
     @property
     def c2w(self) -> np.ndarray:
@@ -140,8 +155,17 @@ def load_transforms(path, downscale=1.0, every=1):
             label=f.get('camera_label'),
             loss_weight=_loss_weight(f, path),
             time_offset=float(f.get('time_offset', 0.0)),
+            readout_s=float(f.get('readout_s') or 0.0),
+            raw_camera=_raw_camera(f.get('raw_camera')),
         ))
     return cams
+
+
+def _raw_camera(d):
+    if not d:
+        return None
+    from cumuli_core.shutter import RawCamera
+    return RawCamera.from_json(d)
 
 
 def group_by_time(cameras):

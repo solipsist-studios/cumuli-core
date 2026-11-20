@@ -12,6 +12,7 @@ Modules:
     dataset    dataset_4dgs/ reader (numpy + pillow)
     spacetime  per-splat tensors and the temporal slice (torch)
     render     gsplat rasterization wrapper (torch + gsplat)
+    shutter    rolling-shutter row timing and raw camera models (numpy, torch optional)
     metrics    PSNR, SSIM, LPIPS (torch + torchmetrics + lpips)
 
 Nothing is imported here, so `import cumuli_core.ply` never pulls in torch.
