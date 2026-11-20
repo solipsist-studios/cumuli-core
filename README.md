@@ -9,6 +9,7 @@ cumuli pipeline scripts and the cumuli trainer both import them.
 | `cumuli_core.sh` | nothing | SH block widths and band counts |
 | `cumuli_core.sogst` | numpy, pillow | .sogst archive decoder, `load_model()` |
 | `cumuli_core.cameras` | numpy | `Camera`, `load_transforms()`, `group_by_time()` |
+| `cumuli_core.shutter` | numpy, torch (optional) | rolling-shutter geometry: raw sensor row fractions, per-Gaussian readout times |
 | `cumuli_core.dataset` | numpy, pillow | `Dataset4D` for a `dataset_4dgs/` directory |
 | `cumuli_core.spacetime` | torch | `SpacetimeTensors`, `slice_at()`, PLY field mapping |
 | `cumuli_core.render` | torch, gsplat | `render()`, a thin `gsplat.rasterization` wrapper |
