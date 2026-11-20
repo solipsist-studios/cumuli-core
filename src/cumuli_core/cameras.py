@@ -38,6 +38,11 @@ class Camera:
                  transforms file does not say.
     time       : seconds, from the entry's `time` (0.0 when absent).
     label      : the entry's camera_label, or None.
+    loss_weight: how much this view's photometric loss counts, from the
+                 entry's `loss_weight` (1.0 when absent; 0 or more).  A
+                 dataset marks views it trusts less, such as generated ones,
+                 with a value below 1.  Trainers scale that view's colour
+                 loss by it; the format says nothing about other terms.
     """
     name: str
     image_path: str
@@ -47,6 +52,7 @@ class Camera:
     height: Optional[int]
     time: float
     label: Optional[str] = None
+    loss_weight: float = 1.0
     extra: dict = field(default_factory=dict, repr=False, compare=False)
 
     @property
@@ -65,6 +71,21 @@ def opengl_c2w_to_w2c(c2w_gl) -> np.ndarray:
     c2w = np.array(c2w_gl, dtype=np.float64)
     c2w[:3, 1:3] *= -1.0
     return np.linalg.inv(c2w)
+
+
+def _loss_weight(entry, path):
+    """The entry's loss_weight as a float, 1.0 when absent.  A negative or
+    non-finite weight would flip or poison the loss, so it is an error."""
+    raw = entry.get('loss_weight', 1.0)
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        raise ValueError(f'{path}: {entry.get("file_path")}: loss_weight '
+                         f'{raw!r} is not a number') from None
+    if not np.isfinite(value) or value < 0.0:
+        raise ValueError(f'{path}: {entry.get("file_path")}: loss_weight must '
+                         f'be finite and at least 0, got {raw!r}')
+    return value
 
 
 def load_transforms(path, downscale=1.0, every=1):
@@ -104,6 +125,7 @@ def load_transforms(path, downscale=1.0, every=1):
             height=h,
             time=float(f.get('time', 0.0)),
             label=f.get('camera_label'),
+            loss_weight=_loss_weight(f, path),
         ))
     return cams
 

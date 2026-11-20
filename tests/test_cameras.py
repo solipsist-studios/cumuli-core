@@ -128,3 +128,55 @@ def test_group_by_time_sorts_times_and_keeps_camera_order(tmp_path):
     assert list(groups) == [0.0, 0.25, 0.5]
     assert [c.label for c in groups[0.5]] == ["e00", "e03"]
     assert all(isinstance(c, Camera) for g in groups.values() for c in g)
+
+
+# --- loss_weight: a per-view multiplier on the colour loss ---------------
+
+ABSENT = object()
+
+
+def weighted_transforms(tmp_path, weights):
+    """One camera per entry of `weights`; ABSENT leaves loss_weight out."""
+    frames = []
+    for i, w in enumerate(weights):
+        frame = {"file_path": f"images/{i:02d}", "time": 0.0,
+                 "fl_x": 800.0, "fl_y": 800.0, "cx": 512.0, "cy": 384.0,
+                 "w": 1024, "h": 768, "transform_matrix": IDENTITY_AT_Z3}
+        if w is not ABSENT:
+            frame["loss_weight"] = w
+        frames.append(frame)
+    path = tmp_path / "transforms_train.json"
+    path.write_text(json.dumps({"frames": frames}))
+    return path
+
+
+def test_loss_weight_defaults_to_one(tmp_path):
+    cams = load_transforms(weighted_transforms(tmp_path, [ABSENT, ABSENT]))
+    assert [c.loss_weight for c in cams] == [1.0, 1.0]
+
+
+def test_loss_weight_is_read_per_entry(tmp_path):
+    cams = load_transforms(weighted_transforms(tmp_path, [1.0, 0.5, 0, ABSENT]))
+    assert [c.loss_weight for c in cams] == [1.0, 0.5, 0.0, 1.0]
+    assert all(isinstance(c.loss_weight, float) for c in cams)
+
+
+def test_loss_weight_survives_downscale_and_every(tmp_path):
+    path = weighted_transforms(tmp_path, [1.0, 0.25, 1.0, 0.75])
+    assert [c.loss_weight for c in load_transforms(path, downscale=2, every=2)] == [1.0, 1.0]
+    assert [c.loss_weight for c in load_transforms(path, every=1)] == [1.0, 0.25, 1.0, 0.75]
+
+
+@pytest.mark.parametrize("bad", [-0.1, -1, float("nan"), float("inf"), "heavy", None, [1]])
+def test_loss_weight_rejects_values_that_would_poison_the_loss(tmp_path, bad):
+    # json.dumps writes NaN/Infinity, which json.load reads back
+    path = weighted_transforms(tmp_path, [1.0, bad])
+    with pytest.raises(ValueError, match="loss_weight"):
+        load_transforms(path)
+
+
+def test_loss_weight_error_names_the_file_and_the_view(tmp_path):
+    path = weighted_transforms(tmp_path, [1.0, -2.0])
+    with pytest.raises(ValueError) as exc:
+        load_transforms(path)
+    assert "transforms_train.json" in str(exc.value) and "images/01" in str(exc.value)

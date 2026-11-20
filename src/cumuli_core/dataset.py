@@ -17,6 +17,9 @@ The layout is what cumuli's build_flipbook_4dgs_dataset.py writes:
 file_path entries carry no extension; load_image() tries the path as given,
 then with .png, .jpg and .jpeg appended.
 
+An entry may carry `loss_weight` (default 1.0, at least 0): how much that
+view's colour loss counts in training.  See cumuli_core.cameras.Camera.
+
 Numpy for everything; pillow for load_image().
 """
 
