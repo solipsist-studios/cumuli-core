@@ -58,6 +58,30 @@ pytest tests
 The GPU tests in `tests/test_render.py` skip without CUDA. Everything else
 runs on CPU.
 
+## Attributions
+
+No third-party source code is included.
+
+- **Formats:** the 4D interchange PLY and the `.sogst` container are specified in
+  the cumuli repo (`docs/sogst-format.md`, CC-BY-4.0). The `.sogst` container
+  extends PlayCanvas's SOG format (MIT, https://github.com/playcanvas/splat-transform).
+  The per-splat PLY conventions (spherical-harmonic coefficients, logit opacity,
+  log scales) are those of Kerbl, Kopanas, Leimkühler and Drettakis, "3D Gaussian
+  Splatting for Real-Time Radiance Field Rendering", SIGGRAPH 2023. The temporal
+  model (polynomial motion, temporal radial-basis opacity) follows Li, Chen, Li and
+  Xu, "Spacetime Gaussian Feature Splatting for Real-Time Dynamic View Synthesis",
+  CVPR 2024.
+- **Rolling shutter (`cumuli_core.shutter`):** the raw `OPENCV_FISHEYE` and `OPENCV`
+  camera models are OpenCV's, as documented (Apache-2.0); the tests use OpenCV's
+  `cv2.fisheye.distortPoints` and `cv2.projectPoints` as the numerical reference.
+  The mid-line time convention and the mapping from an undistorted pixel to a raw
+  sensor row were informed by the documentation and a few source excerpts of
+  Open4DGS-Core (MIT, https://open4dgs.asunemlabs.com) and Open4DGS-Trigs (AGPL-3.0,
+  https://github.com/ASU-NEM-Labs/open4dgs-trigs). No code from either is included.
+- **Dependencies (not vendored):** numpy and PyTorch (BSD-3-Clause), gsplat and
+  torchmetrics (Apache-2.0), lpips (BSD-2-Clause), pillow (MIT-CMU), OpenCV for the
+  tests (Apache-2.0).
+
 ## Licence
 
 PolyForm Noncommercial License 1.0.0 (see `LICENSE.md`).
