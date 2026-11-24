@@ -43,10 +43,22 @@ def test_the_splat_is_untouched_at_its_time_centre():
     assert torch.allclose(opac, torch.sigmoid(p.opacity_logit), atol=1e-12)
 
 
-def test_opacity_follows_the_temporal_gaussian():
+def test_opacity_follows_the_temporal_gaussian_renormalised_at_five_percent():
     p = make()
-    _, _, opac = trigs.slice_at(p, 1.5)    # one sigma away
-    assert torch.allclose(opac, torch.sigmoid(p.opacity_logit) * math.exp(-0.5), atol=1e-12)
+    _, _, opac = trigs.slice_at(p, 1.5)    # one sigma away: gamma = exp(-0.5)
+    want = (math.exp(-0.5) - 0.05) / 0.95
+    assert torch.allclose(opac, torch.sigmoid(p.opacity_logit) * want, atol=1e-12)
+
+
+def test_the_weight_is_one_at_the_centre_zero_past_the_cutoff_and_continuous_between():
+    sigma = torch.tensor([0.5, 0.5, 0.5, 0.5], dtype=D)
+    dt = torch.tensor([0.0, 0.5, 2.44 * 0.5, 3.0 * 0.5], dtype=D)
+    w = trigs.temporal_weight(dt, sigma)
+    assert w[0] == 1.0 and w[3] == 0.0
+    # gamma = 0.05 at dt = sigma * sqrt(-2 ln 0.05) = 2.4477 sigma: the weight reaches zero exactly there
+    edge = 0.5 * math.sqrt(-2.0 * math.log(0.05))
+    assert float(trigs.temporal_weight(torch.tensor([edge], dtype=D), torch.tensor([0.5], dtype=D))) == pytest.approx(0.0, abs=1e-12)
+    assert 0.0 < float(w[2]) < float(w[1]) < 1.0
 
 
 def test_a_pure_translation_moves_linearly():

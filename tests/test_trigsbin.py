@@ -103,6 +103,40 @@ def test_the_packed_model_slices_like_the_checkpoint(tmp_path, t):
     assert sh.shape == ref.sh.shape
 
 
+ASOG_SRC = Path(os.environ.get('ASOG_ROOT') or Path.home() / 'Dev/github/animated-sog') / 'python' / 'src'
+needs_asog = pytest.mark.skipif(not (ASOG_SRC / 'asog').is_dir(), reason='animated-sog is not checked out (set ASOG_ROOT)')
+
+
+@needs_packer
+@needs_asog
+@pytest.mark.parametrize('t', [0.1, 0.5, 0.9])
+def test_an_asog_decode_of_the_same_file_agrees_with_our_slice(tmp_path, t):
+    """The animated-sog encoder and decoder (MIT, github.com/arrival-space/animated-sog) read the packer's file and evaluate it
+    with their own code. The encoder reorders splats and quantises, so the comparison is of sorted weights and positions."""
+    sys.path.insert(0, str(ASOG_SRC))
+    try:
+        import asog
+    finally:
+        sys.path.remove(str(ASOG_SRC))
+    params = checkpoint_params(n=600)
+    packed = pack(tmp_path, params)
+    asog.encode(packed, tmp_path / 'c.asog', prune=0.0, shk=64)
+    decoded = asog.read(tmp_path / 'c.asog')
+    frame = decoded.evaluate(t)
+    means, quats, opac, sh, scales = trigsbin.load_model(packed).slice(t)
+    weight = (opac / torch.sigmoid(torch.from_numpy(params['opacities']))).numpy()
+    assert decoded.count == len(weight)
+    # the temporal weights: same formula, mu and sigma quantised (2^-11 s, 8-bit log sigma)
+    assert np.allclose(np.sort(frame.weights), np.sort(weight), atol=2e-2)
+    live_theirs, live_ours = frame.weights > 0.5, weight > 0.5
+    assert abs(int(live_theirs.sum()) - int(live_ours.sum())) <= 6
+    # where the splats are: every coordinate's sorted values (the motion maths, whatever order the file kept)
+    # (quantiles: a splat on the weight threshold may count on one side only, so the two lists can differ by one)
+    q = np.linspace(0.0, 1.0, 21)
+    for axis in range(3):
+        assert np.allclose(np.quantile(frame.positions[live_theirs, axis], q), np.quantile(means.numpy()[live_ours, axis], q), atol=0.05)
+
+
 @needs_packer
 def test_a_per_splat_time_slices_a_single_clip_file(tmp_path):
     params = checkpoint_params()

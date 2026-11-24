@@ -17,7 +17,9 @@ is silent the choice is ours and is marked "ours".
 For one splat, with t_c its time centre (``times``), s its temporal sigma
 (``exp(log_durations)``) and dt = t - t_c:
 
-    gamma(t)  = exp(-0.5 (dt / s)^2)                   (Eq. 1)   alpha(t) = sigmoid(opacity) * gamma
+    gamma(t)  = exp(-0.5 (dt / s)^2)                   (Eq. 1)
+    w(t)      = max((gamma - 0.05) / 0.95, 0)          the weight the file format applies (see below)
+    alpha(t)  = sigmoid(opacity) * w
     tau       = clamp((dt + 2 s) / (4 s), 0, 1)        (Eqs. 5-6)
     zeta(t)   = zeta_base + (1-tau)^2 c0 + 2 (1-tau) tau c1 + tau^2 c2        (Eqs. 7-8)
     phi       = omega(t) dt      upsilon = nu(t) dt    (zeta = (omega, nu) in se(3))
@@ -35,7 +37,14 @@ exactly for a translation along the axis and differ for a perpendicular one,
 which only the anchor can express; the paper's gauge fixing has the same seam.
 
 The temporal term of the paper's Eq. 8 keeps growing linearly outside the
-window; only gamma suppresses it.  Nothing here clamps dt.
+window; only the weight suppresses it.  Nothing here clamps dt.
+
+The opacity weight w is the format's, not the paper's plain gamma (Eq. 1): Open4DGS's
+runtime file calls it "smooth_cull_renormalized", and the animated-sog spec
+(github.com/arrival-space/animated-sog, docs/format.md, MIT) gives it as
+max((gamma - 0.05) / 0.95, 0): a splat is gone where gamma falls under 5% and the
+rest is stretched back to 1 at the centre.  Training, scoring and every player use
+it, so what is trained is what is shown.
 
 Units: seconds for ``times`` and dt; ``zeta_*_r`` in radians per second and
 ``zeta_*_t`` in scene units per second.  Quaternions are wxyz here (the
@@ -216,8 +225,19 @@ def slice_at(p: TrigsTensors, t):
     means = (rot @ centred[..., None])[..., 0] + a_perp + shift
 
     quats = quat_mul_wxyz(rotvec_to_quat_wxyz(phi), p.quats_wxyz)
-    opacities = torch.sigmoid(p.opacity_logit) * torch.exp(-0.5 * (dt / sigma) ** 2)
+    opacities = torch.sigmoid(p.opacity_logit) * temporal_weight(dt, sigma)
     return means, quats, opacities
+
+
+#: Where the temporal gaussian is cut off and renormalised (the format's weight, see the module docstring).
+WEIGHT_FLOOR = 0.05
+
+
+def temporal_weight(dt, sigma):
+    """The opacity weight of a splat at `dt` seconds from its centre, with temporal sigma `sigma`:
+    max((gamma - 0.05) / 0.95, 0), gamma = exp(-0.5 (dt / sigma)^2).  1 at the centre, 0 from about 2.45 sigma out."""
+    gamma = torch.exp(-0.5 * (dt / sigma) ** 2)
+    return ((gamma - WEIGHT_FLOOR) / (1.0 - WEIGHT_FLOOR)).clamp_min(0.0)
 
 
 def window_bounds(p: TrigsTensors):
