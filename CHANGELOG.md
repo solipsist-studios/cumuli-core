@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
 - `cumuli_core.trigs`: the TRiGS motion model (Open4DGS `trigs.se3_bezier_v1`) and its temporal slice, written
   from the TRiGS paper (arXiv 2604.00538): temporal opacity window, quadratic Bezier se(3) twist, and the
@@ -8,8 +8,6 @@
   time per splat (rolling shutter).
 - `cumuli_core.trigsbin`: reads Open4DGS-Core's `.trigsbin` runtime file (MIT packager, runtime format 1):
   `read`, and `TrigsModel`/`load_model` to slice it at a global time with the clips' fades.
-
-## 0.2.0
 
 New per-view fields on `Camera`, each read from the matching key of a
 `transforms_train.json` or `transforms_test.json` entry. All have defaults,

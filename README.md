@@ -12,6 +12,8 @@ cumuli pipeline scripts and the cumuli trainer both import them.
 | `cumuli_core.shutter` | numpy, torch (optional) | rolling-shutter geometry: raw sensor row fractions, per-Gaussian readout times |
 | `cumuli_core.dataset` | numpy, pillow | `Dataset4D` for a `dataset_4dgs/` directory |
 | `cumuli_core.spacetime` | torch | `SpacetimeTensors`, `slice_at()`, PLY field mapping |
+| `cumuli_core.trigs` | torch | TRiGS motion model, `TrigsTensors`, `slice_at()` |
+| `cumuli_core.trigsbin` | numpy, torch (to slice) | Open4DGS `.trigsbin` reader |
 | `cumuli_core.render` | torch, gsplat | `render()`, a thin `gsplat.rasterization` wrapper |
 | `cumuli_core.metrics` | torch, torchmetrics, lpips | `psnr()`, `ssim()`, `LPIPS` |
 
@@ -71,6 +73,17 @@ No third-party source code is included.
   model (polynomial motion, temporal radial-basis opacity) follows Li, Chen, Li and
   Xu, "Spacetime Gaussian Feature Splatting for Real-Time Dynamic View Synthesis",
   CVPR 2024.
+- **TRiGS (`cumuli_core.trigs`):** written from Yeom, Nam, Choi, Lee, Kim, Park,
+  Kim, Yun, Kong and Kang, "TRiGS: Temporal Rigid-Body Motion for Scalable 4D
+  Gaussian Splatting", arXiv:2604.00538, 2026, and from the tensor names of the
+  Open4DGS-Core packager (MIT, https://github.com/ASU-NEM-Labs/open4dgs-core).
+  The temporal opacity weight is the one in the animated-sog format document
+  (MIT, https://github.com/arrival-space/animated-sog).
+- **`.trigsbin` reader (`cumuli_core.trigsbin`):** reads the layout written by
+  the Open4DGS-Core packager (v0.1.0, runtime format 1).
+
+  No code from either project is included, and no Open4DGS trainer code was
+  read for these two modules.
 - **Rolling shutter (`cumuli_core.shutter`):** the raw `OPENCV_FISHEYE` and `OPENCV`
   camera models are OpenCV's, as documented (Apache-2.0); the tests use OpenCV's
   `cv2.fisheye.distortPoints` and `cv2.projectPoints` as the numerical reference.
