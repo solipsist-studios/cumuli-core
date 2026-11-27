@@ -11,6 +11,8 @@ Modules:
     cameras    transforms.json camera loader (numpy)
     dataset    dataset_4dgs/ reader (numpy + pillow)
     spacetime  per-splat tensors and the temporal slice (torch)
+    trigs      TRiGS motion model and its temporal slice (torch)
+    trigsbin   Open4DGS .trigsbin runtime reader (numpy; torch to slice)
     render     gsplat rasterization wrapper (torch + gsplat)
     shutter    rolling-shutter row timing and raw camera models (numpy, torch optional)
     metrics    PSNR, SSIM, LPIPS (torch + torchmetrics + lpips)
@@ -18,4 +20,4 @@ Modules:
 Nothing is imported here, so `import cumuli_core.ply` never pulls in torch.
 """
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
